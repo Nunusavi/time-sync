@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>TimeSync — Cross-Timezone Meeting Planner</title>
+
+    <!-- Tailwind CDN (quick production-ready build can be generated in your repo later) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        // Tailwind config for dark mode and container
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        timesync: {
+                            50: '#f6fbff',
+                            500: '#0ea5a4',
+                            700: '#0b7f7e'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- Google Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        html,
+        body {
+            font-family: 'Inter', system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+        }
+
+        /* small helper for tooltip */
+        .tooltip {
+            position: relative;
+        }
+
+        .tooltip:hover .tooltip-content {
+            opacity: 1;
+            transform: translateY(-6px);
+            pointer-events: auto;
+        }
+
+        .tooltip-content {
+            transition: all .15s ease;
+            opacity: 0;
+            transform: translateY(-2px);
+            pointer-events: none;
+        }
+
+        /* heatmap colors (mapped to tailwind classes below) */
+        .cell {
+            border-radius: .25rem;
+            min-width: 36px;
+            height: 44px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: .75rem;
+        }
+
+        @media (max-width:640px) {
+            .cell {
+                min-width: 26px;
+                height: 34px;
+            }
+        }
+
+        /* subtle focus ring for keyboard users */
+        .focus-ring:focus {
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(14, 165, 164, 0.15);
+            border-radius: .375rem;
+        }
+
+        /* toast styles (tailwind utility-locally overwritten) */
+        .toast-enter {
+            transform: translateY(8px);
+            opacity: 0;
+        }
+
+        .toast-enter-active {
+            transform: translateY(0);
+            opacity: 1;
+            transition: all .18s ease;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-50 text-slate-800 dark:bg-slate-900 dark:text-slate-100">
+
+    <div class="min-h-screen flex items-start justify-center p-6">
+        <div class="w-full max-w-6xl bg-white dark:bg-slate-800 shadow-lg rounded-2xl overflow-hidden">
+            <!-- HERO -->
+            <div
+                class="flex flex-col md:flex-row items-center md:items-start gap-6 p-6 md:p-8 bg-gradient-to-r from-timesync-50 to-white dark:from-slate-800 dark:to-slate-800">
+                <div class="flex-1">
+                    <h1 class="text-2xl md:text-3xl font-extrabold leading-tight">TimeSync</h1>
+                    <p class="mt-2 text-slate-600 dark:text-slate-300">Plan meetings across timezones with an
+                        availability heatmap, shareable links, and calendar exports — no backend required.</p>
+                    <div class="mt-4 flex gap-3 flex-wrap">
+                        <button id="demoBtn"
+                            class="px-4 py-2 bg-timesync-500 hover:bg-timesync-700 text-white rounded-md shadow-sm text-sm">Load
+                            Demo</button>
+                        <button id="shareBtn"
+                            class="px-4 py-2 border border-slate-200 dark:border-slate-700 rounded-md text-sm">Copy
+                            share link</button>
+                        <button id="toggleTheme"
+                            class="px-3 py-2 rounded-md border border-slate-200 dark:border-slate-700 text-sm">Toggle
+                            theme</button>
+                        <a id="readmeLink" class="px-3 py-2 rounded-md text-sm text-slate-500 hover:underline" href="#"
+                            target="_blank" rel="noreferrer">README</a>
+                    </div>
+                </div>
+
+                <div class="w-full md:w-96 flex flex-col gap-3">
+                    <div
+                        class="bg-white dark:bg-slate-700 p-3 rounded-lg border border-slate-100 dark:border-slate-700">
+                        <div class="flex items-center justify-between text-sm text-slate-500 dark:text-slate-300">
+                            <div>Detected timezone</div>
+                            <div id="detectedTz" class="font-medium"></div>
+                        </div>
+                        <div class="mt-2 text-xs text-slate-400">Tip: Use the demo data to explore quickly.</div>
+                    </div>
+
+                    <div
+                        class="bg-white dark:bg-slate-700 p-3 rounded-lg border border-slate-100 dark:border-slate-700">
+                        <div class="flex items-center justify-between">
+                            <div class="text-sm text-slate-500 dark:text-slate-300">Saved Config</div>
+                            <div class="text-xs text-slate-400" id="savedInfo">—</div>
+                        </div>
+                        <div class="mt-3 flex gap-2">
+                            <button id="saveBtn"
+                                class="flex-1 px-3 py-2 bg-green-600 hover:bg-green-700 text-white rounded-md text-sm">Save</button>
+                            <button id="loadBtn"
+                                class="flex-1 px-3 py-2 border border-slate-200 dark:border-slate-600 rounded-md text-sm">Load</button>
+                            <button id="resetBtn"
+                                class="px-3 py-2 rounded-md text-sm bg-red-50 text-red-700 hover:bg-red-100">Reset</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- MAIN -->
+            <div class="md:flex">
+                <!-- Left: form + participants -->
+                <div class="md:w-96 p-6 border-r border-slate-100 dark:border-slate-700">
+                    <h2 class="text-lg font-semibold">Add Participant</h2>
+
+                    <div class="mt-4 grid grid-cols-1 gap-3">
+                        <input id="nameInput"
+                            class="focus-ring block w-full px-3 py-2 border border-slate-200 rounded-md bg-white dark:bg-slate-800 dark:border-slate-700"
+                            placeholder="Name / identifier" />
+
+                        <select id="tzSelect"
+                            class="focus-ring block w-full px-3 py-2 border rounded-md bg-white dark:bg-slate-800">
+                            <option value="">Select timezone</option>
+                        </select>
+
+                        <div class="flex gap-2">
+                            <input id="startInput" type="time" value="09:00"
+                                class="focus-ring w-1/2 px-3 py-2 border rounded-md bg-white dark:bg-slate-800" />
+                            <input id="endInput" type="time" value="17:00"
+                                class="focus-ring w-1/2 px-3 py-2 border rounded-md bg-white dark:bg-slate-800" />
+                        </div>
+
+                        <div class="flex gap-2">
+                            <button id="addBtn"
+                                class="flex-1 px-3 py-2 bg-timesync-500 hover:bg-timesync-700 text-white rounded-md">Add</button>
+                            <button id="demoPerson"
+                                class="px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-md">Quick
+                                +</button>
+                        </div>
+                    </div>
+
+                    <h3 class="mt-6 text-sm font-medium text-slate-600 dark:text-slate-300">Participants</h3>
+                    <div id="participantsContainer" class="mt-3 space-y-3 max-h-64 overflow-auto pr-2">
+                        <!-- Participant cards inserted here -->
+                    </div>
+
+                    <div class="mt-4">
+                        <label class="text-sm text-slate-500 dark:text-slate-300">Max suggestions</label>
+                        <input id="maxSuggestions" type="number" min="1" max="6" value="3"
+                            class="mt-1 w-24 px-2 py-1 border rounded-md bg-white dark:bg-slate-800" />
+                    </div>
+                </div>
+
+                <!-- Right: heatmap + suggestions -->
+                <div class="flex-1 p-6">
+                    <div class="flex items-center justify-between">
+                        <h2 class="text-lg font-semibold">Availability Heatmap (UTC)</h2>
+                        <div class="text-sm text-slate-500 dark:text-slate-300">Hover a cell to see who is available
+                        </div>
+                    </div>
+
+                    <div id="heatmapWrap" class="mt-3 overflow-auto">
+                        <div id="heatmap" class="inline-flex gap-1 items-start">
+                            <!-- Heatmap grid will be generated here -->
+                        </div>
+                    </div>
+
+                    <div class="mt-6">
+                        <h3 class="text-md font-semibold">Suggested Meeting Times</h3>
+                        <div id="suggestions" class="mt-3 grid gap-3 grid-cols-1 md:grid-cols-2"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div
+                class="p-4 text-xs text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-900 border-t border-slate-100 dark:border-slate-700">
+                TimeSync • Client-side only • Ready for GitHub Pages / Vercel deploy
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast container -->
+    <div id="toastRoot" class="fixed bottom-6 right-6 flex flex-col gap-2 z-50"></div>
+
+    <script>
+    </Script>
+</body>
+
+</html>
