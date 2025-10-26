@@ -4,21 +4,55 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>TimeSync — Cross-Timezone Meeting Planner</title>
+    <title>TimeSync v2.1 – Smart Cross-Timezone Meeting Planner</title>
 
-    <!-- Tailwind CDN (quick production-ready build can be generated in your repo later) -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
-        // Tailwind config for dark mode and container
         tailwind.config = {
             darkMode: 'class',
             theme: {
                 extend: {
                     colors: {
                         timesync: {
-                            50: '#f6fbff',
-                            500: '#0ea5a4',
-                            700: '#0b7f7e'
+                            50: '#f0fdfa',
+                            100: '#ccfbf1',
+                            200: '#99f6e4',
+                            300: '#5eead4',
+                            400: '#2dd4bf',
+                            500: '#14b8a6',
+                            600: '#0d9488',
+                            700: '#0f766e',
+                            800: '#115e59',
+                            900: '#134e4a'
+                        }
+                    },
+                    animation: {
+                        'gradient': 'gradient 8s linear infinite',
+                        'float': 'float 6s ease-in-out infinite',
+                        'slideIn': 'slideIn 0.3s ease-out',
+                        'fadeIn': 'fadeIn 0.4s ease-out',
+                        'pulse-soft': 'pulse-soft 2s ease-in-out infinite'
+                    },
+                    keyframes: {
+                        gradient: {
+                            '0%, 100%': { backgroundPosition: '0% 50%' },
+                            '50%': { backgroundPosition: '100% 50%' }
+                        },
+                        float: {
+                            '0%, 100%': { transform: 'translateY(0px)' },
+                            '50%': { transform: 'translateY(-20px)' }
+                        },
+                        slideIn: {
+                            '0%': { transform: 'translateX(-10px)', opacity: '0' },
+                            '100%': { transform: 'translateX(0)', opacity: '1' }
+                        },
+                        fadeIn: {
+                            '0%': { opacity: '0' },
+                            '100%': { opacity: '1' }
+                        },
+                        'pulse-soft': {
+                            '0%, 100%': { opacity: '1' },
+                            '50%': { opacity: '0.7' }
                         }
                     }
                 }
@@ -26,203 +60,818 @@
         }
     </script>
 
-    <!-- Google Font -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
 
     <style>
         html,
         body {
-            font-family: 'Inter', system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            scroll-behavior: smooth;
         }
 
-        /* small helper for tooltip */
-        .tooltip {
-            position: relative;
+        .glass {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
         }
 
-        .tooltip:hover .tooltip-content {
-            opacity: 1;
-            transform: translateY(-6px);
-            pointer-events: auto;
+        .dark .glass {
+            background: rgba(30, 41, 59, 0.7);
+            border: 1px solid rgba(71, 85, 105, 0.3);
         }
 
-        .tooltip-content {
-            transition: all .15s ease;
-            opacity: 0;
-            transform: translateY(-2px);
+        .hero-gradient {
+            background: linear-gradient(135deg, #14b8a6 0%, #06b6d4 25%, #8b5cf6 50%, #ec4899 75%, #14b8a6 100%);
+            background-size: 400% 400%;
+            animation: gradient 8s ease infinite;
+        }
+
+        .orb {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(60px);
+            opacity: 0.3;
             pointer-events: none;
         }
 
-        /* heatmap colors (mapped to tailwind classes below) */
+        .orb-1 {
+            width: 300px;
+            height: 300px;
+            background: #14b8a6;
+            top: -100px;
+            left: -100px;
+            animation: float 6s ease-in-out infinite;
+        }
+
+        .orb-2 {
+            width: 250px;
+            height: 250px;
+            background: #8b5cf6;
+            bottom: -80px;
+            right: -80px;
+            animation: float 8s ease-in-out infinite 1s;
+        }
+
         .cell {
-            border-radius: .25rem;
-            min-width: 36px;
-            height: 44px;
+            border-radius: 0.375rem;
+            min-width: 40px;
+            height: 48px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: .75rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            transition: all 0.2s ease;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .cell:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            z-index: 10;
+        }
+
+        .cell.conflict::after {
+            content: '⚠️';
+            position: absolute;
+            top: -4px;
+            right: -4px;
+            font-size: 0.6rem;
+        }
+
+        .cell.golden {
+            position: relative;
+            animation: pulse-soft 2s ease-in-out infinite;
+        }
+
+        .cell.golden::before {
+            content: '⭐';
+            position: absolute;
+            top: -6px;
+            left: -6px;
+            font-size: 0.7rem;
         }
 
         @media (max-width:640px) {
             .cell {
-                min-width: 26px;
-                height: 34px;
+                min-width: 32px;
+                height: 40px;
+                font-size: 0.65rem;
             }
         }
 
-        /* subtle focus ring for keyboard users */
         .focus-ring:focus {
             outline: none;
-            box-shadow: 0 0 0 3px rgba(14, 165, 164, 0.15);
-            border-radius: .375rem;
+            box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.3);
+            border-radius: 0.5rem;
         }
 
-        /* toast styles (tailwind utility-locally overwritten) */
-        .toast-enter {
-            transform: translateY(8px);
-            opacity: 0;
+        .transition-smooth {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
-        .toast-enter-active {
-            transform: translateY(0);
-            opacity: 1;
-            transition: all .18s ease;
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f1f5f9;
+            border-radius: 4px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+
+        .dark .custom-scrollbar::-webkit-scrollbar-track {
+            background: #1e293b;
+        }
+
+        .dark .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #475569;
+        }
+
+        .drag-handle {
+            cursor: grab;
+            user-select: none;
+        }
+
+        .drag-handle:active {
+            cursor: grabbing;
+        }
+
+        .dragging {
+            opacity: 0.5;
+            transform: scale(0.95);
+        }
+
+        .page-container {
+            width: 100%;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        @media (min-width: 1024px) {
+            .page-container {
+                max-width: calc(100vw - 100px);
+            }
+        }
+
+        .initials {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.65rem;
+            font-weight: 700;
+            color: white;
+        }
+
+        .editable {
+            cursor: pointer;
+            padding: 2px 4px;
+            border-radius: 4px;
+            transition: background 0.2s;
+        }
+
+        .editable:hover {
+            background: rgba(20, 184, 166, 0.1);
+        }
+
+        .priority-badge {
+            font-size: 0.65rem;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: 600;
+        }
+
+        .template-card {
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .template-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Mobile optimizations */
+        @media (max-width: 768px) {
+            .bottom-sheet {
+                position: fixed;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                max-height: 70vh;
+                overflow-y: auto;
+                z-index: 50;
+            }
+
+            #settingsPanel {
+                width: 100vw;
+                max-width: none;
+                right: 0 !important;
+                top: auto;
+                bottom: 0;
+                border-bottom-left-radius: 0;
+                border-bottom-right-radius: 0;
+                border-top-left-radius: 1.25rem;
+                border-top-right-radius: 1.25rem;
+                max-height: 75vh;
+                transform-origin: bottom right;
+            }
+
+            #settingsToggleFloating {
+                top: auto;
+                bottom: 1.25rem;
+            }
+        }
+
+        /* Loading spinner */
+        .spinner {
+            border: 3px solid rgba(20, 184, 166, 0.2);
+            border-top: 3px solid #14b8a6;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* Error state */
+        .error-shake {
+            animation: shake 0.4s ease-in-out;
+        }
+
+        @keyframes shake {
+
+            0%,
+            100% {
+                transform: translateX(0);
+            }
+
+            25% {
+                transform: translateX(-10px);
+            }
+
+            75% {
+                transform: translateX(10px);
+            }
         }
     </style>
 </head>
 
-<body class="bg-gray-50 text-slate-800 dark:bg-slate-900 dark:text-slate-100">
+<body
+    class="bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 text-slate-800 dark:text-slate-100">
 
-    <div class="min-h-screen flex items-start justify-center p-6">
-        <div class="w-full max-w-6xl bg-white dark:bg-slate-800 shadow-lg rounded-2xl overflow-hidden">
-            <!-- HERO -->
-            <div
-                class="flex flex-col md:flex-row items-center md:items-start gap-6 p-6 md:p-8 bg-gradient-to-r from-timesync-50 to-white dark:from-slate-800 dark:to-slate-800">
-                <div class="flex-1">
-                    <h1 class="text-2xl md:text-3xl font-extrabold leading-tight">TimeSync</h1>
-                    <p class="mt-2 text-slate-600 dark:text-slate-300">Plan meetings across timezones with an
-                        availability heatmap, shareable links, and calendar exports — no backend required.</p>
-                    <div class="mt-4 flex gap-3 flex-wrap">
-                        <button id="demoBtn"
-                            class="px-4 py-2 bg-timesync-500 hover:bg-timesync-700 text-white rounded-md shadow-sm text-sm">Load
-                            Demo</button>
-                        <button id="shareBtn"
-                            class="px-4 py-2 border border-slate-200 dark:border-slate-700 rounded-md text-sm">Copy
-                            share link</button>
-                        <button id="toggleTheme"
-                            class="px-3 py-2 rounded-md border border-slate-200 dark:border-slate-700 text-sm">Toggle
-                            theme</button>
-                        <a id="readmeLink" class="px-3 py-2 rounded-md text-sm text-slate-500 hover:underline" href="#"
-                            target="_blank" rel="noreferrer">README</a>
-                    </div>
-                </div>
+    <div class="min-h-screen flex flex-col items-center p-2 md:p-4">
+        <!-- HERO SECTION -->
+        <div class="w-full page-container mb-6 relative overflow-hidden rounded-3xl shadow-2xl">
+            <div class="orb orb-1"></div>
+            <div class="orb orb-2"></div>
 
-                <div class="w-full md:w-96 flex flex-col gap-3">
-                    <div
-                        class="bg-white dark:bg-slate-700 p-3 rounded-lg border border-slate-100 dark:border-slate-700">
-                        <div class="flex items-center justify-between text-sm text-slate-500 dark:text-slate-300">
-                            <div>Detected timezone</div>
-                            <div id="detectedTz" class="font-medium"></div>
+            <div class="hero-gradient px-4 py-6 md:px-10 md:py-8 relative z-10">
+                <div class="grid gap-4 md:grid-cols-3 items-start">
+                    <!-- Column 1: Branding & Tagline -->
+                    <div class="flex flex-col gap-3 animate-fadeIn order-1 md:order-1">
+                        <div class="flex items-center gap-3">
+                            <div
+                                class="w-11 h-11 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center">
+                                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                            </div>
+                            <h1 class="text-2xl md:text-3xl font-extrabold text-white drop-shadow">TimeSync v2.1</h1>
                         </div>
-                        <div class="mt-2 text-xs text-slate-400">Tip: Use the demo data to explore quickly.</div>
+                        <p class="text-white/90 text-sm md:text-base leading-relaxed max-w-md">
+                            Plan meetings across timezones with intelligent overlap scoring, multi-day suggestions &
+                            offline persistence.
+                        </p>
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <button id="demoBtn"
+                                class="px-4 py-2 bg-white/20 hover:bg-white/30 backdrop-blur-md text-white rounded-lg text-sm font-medium transition-smooth shadow hover:shadow-md">🎬
+                                Demo</button>
+                            <button id="toggleTheme"
+                                class="px-3 py-2 bg-white/20 hover:bg-white/30 backdrop-blur-md text-white rounded-lg text-sm transition-smooth"
+                                title="Toggle theme">🌓</button>
+                            <button id="undoBtn" disabled title="Undo (Ctrl+Z)"
+                                class="glass px-3 py-2 text-white rounded-lg text-xs hover:bg-white/30 transition-smooth disabled:opacity-40 disabled:cursor-not-allowed">↶
+                                Undo</button>
+                            <button id="redoBtn" disabled title="Redo (Ctrl+Shift+Z)"
+                                class="glass px-3 py-2 text-white rounded-lg text-xs hover:bg-white/30 transition-smooth disabled:opacity-40 disabled:cursor-not-allowed">↷
+                                Redo</button>
+                        </div>
                     </div>
 
-                    <div
-                        class="bg-white dark:bg-slate-700 p-3 rounded-lg border border-slate-100 dark:border-slate-700">
-                        <div class="flex items-center justify-between">
-                            <div class="text-sm text-slate-500 dark:text-slate-300">Saved Config</div>
-                            <div class="text-xs text-slate-400" id="savedInfo">—</div>
+                    <!-- Column 2: Stats -->
+                    <div class="flex flex-col gap-3 order-3 md:order-2">
+                        <div class="grid grid-cols-3 gap-3">
+                            <div
+                                class="glass px-3 py-2 rounded-lg text-center flex flex-col justify-center min-h-[64px]">
+                                <div class="text-white/60 text-[10px] tracking-wide uppercase font-medium">
+                                    Participants
+                                </div>
+                                <div class="text-white text-lg font-bold leading-tight" id="statsParticipants">0
+                                </div>
+                            </div>
+                            <div
+                                class="glass px-3 py-2 rounded-lg text-center flex flex-col justify-center min-h-[64px]">
+                                <div class="text-white/60 text-[10px] tracking-wide uppercase font-medium">Spread
+                                </div>
+                                <div class="text-white text-lg font-bold leading-tight" id="statsTimezones">0 hrs
+                                </div>
+                            </div>
+                            <div
+                                class="glass px-3 py-2 rounded-lg text-center flex flex-col justify-center min-h-[64px]">
+                                <div class="text-white/60 text-[10px] tracking-wide uppercase font-medium">TZ Score
+                                </div>
+                                <div class="text-white text-lg font-bold leading-tight" id="statsCompatibility">—
+                                </div>
+                            </div>
                         </div>
-                        <div class="mt-3 flex gap-2">
-                            <button id="saveBtn"
-                                class="flex-1 px-3 py-2 bg-green-600 hover:bg-green-700 text-white rounded-md text-sm">Save</button>
-                            <button id="loadBtn"
-                                class="flex-1 px-3 py-2 border border-slate-200 dark:border-slate-600 rounded-md text-sm">Load</button>
-                            <button id="resetBtn"
-                                class="px-3 py-2 rounded-md text-sm bg-red-50 text-red-700 hover:bg-red-100">Reset</button>
+                        <div class="text-[11px] text-white/90 leading-snug pl-1">
+                            💡 Tip: Load Demo to explore, then add real participants. Use ⚙️ panel to fine-tune.
+                        </div>
+                    </div>
+
+                    <!-- Column 3: Timezone Card -->
+                    <div class="space-y-3 order-2 md:order-3 md:justify-self-end w-full max-w-xs md:max-w-none">
+                        <div class="glass p-4 rounded-xl">
+                            <div class="flex items-center justify-between mb-1">
+                                <span class="text-white/70 text-xs font-medium">Your Timezone</span>
+                                <span id="detectedTz" class="text-white text-sm font-bold"></span>
+                            </div>
+                            <div class="text-white/50 text-[11px]">Auto-detected • Client only</div>
                         </div>
                     </div>
                 </div>
             </div>
+        </div>
 
-            <!-- MAIN -->
-            <div class="md:flex">
-                <!-- Left: form + participants -->
-                <div class="md:w-96 p-6 border-r border-slate-100 dark:border-slate-700">
-                    <h2 class="text-lg font-semibold">Add Participant</h2>
+        <!-- MAIN CONTENT -->
+        <div class="w-full page-container grid lg:grid-cols-[380px_1fr] gap-4 md:gap-6">
 
-                    <div class="mt-4 grid grid-cols-1 gap-3">
+            <!-- LEFT SIDEBAR -->
+            <div class="space-y-4 md:space-y-6">
+                <!-- Add Participant Card -->
+                <div
+                    class="bg-white dark:bg-slate-800 rounded-2xl shadow-lg p-4 md:p-6 transition-smooth animate-slideIn">
+                    <div class="flex items-center justify-between mb-4">
+                        <h2 class="text-lg md:text-xl font-bold flex items-center gap-2">
+                            <span>➕</span> Add Participant
+                        </h2>
+                        <button id="bulkImportBtn"
+                            class="text-xs px-3 py-1 rounded-lg bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 transition-smooth">
+                            📋 Bulk
+                        </button>
+                    </div>
+
+                    <div class="space-y-3">
                         <input id="nameInput"
-                            class="focus-ring block w-full px-3 py-2 border border-slate-200 rounded-md bg-white dark:bg-slate-800 dark:border-slate-700"
-                            placeholder="Name / identifier" />
+                            class="focus-ring w-full px-4 py-3 border-2 border-slate-200 dark:border-slate-600 rounded-xl bg-white dark:bg-slate-700 transition-smooth"
+                            placeholder="Name (e.g., Alice)" maxlength="50" />
 
-                        <select id="tzSelect"
-                            class="focus-ring block w-full px-3 py-2 border rounded-md bg-white dark:bg-slate-800">
-                            <option value="">Select timezone</option>
+                        <select id="tzSelect" title="Participant timezone"
+                            class="focus-ring w-full px-4 py-3 border-2 border-slate-200 dark:border-slate-600 rounded-xl bg-white dark:bg-slate-700 transition-smooth">
+                            <option value="">🌍 Select timezone</option>
                         </select>
 
-                        <div class="flex gap-2">
-                            <input id="startInput" type="time" value="09:00"
-                                class="focus-ring w-1/2 px-3 py-2 border rounded-md bg-white dark:bg-slate-800" />
-                            <input id="endInput" type="time" value="17:00"
-                                class="focus-ring w-1/2 px-3 py-2 border rounded-md bg-white dark:bg-slate-800" />
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label for="startInput"
+                                    class="text-xs text-slate-500 dark:text-slate-400 mb-1 block">Start</label>
+                                <input id="startInput" type="time" value="09:00" title="Working hours start"
+                                    class="focus-ring w-full px-3 py-2 border-2 border-slate-200 dark:border-slate-600 rounded-xl bg-white dark:bg-slate-700" />
+                            </div>
+                            <div>
+                                <label for="endInput"
+                                    class="text-xs text-slate-500 dark:text-slate-400 mb-1 block">End</label>
+                                <input id="endInput" type="time" value="17:00" title="Working hours end"
+                                    class="focus-ring w-full px-3 py-2 border-2 border-slate-200 dark:border-slate-600 rounded-xl bg-white dark:bg-slate-700" />
+                            </div>
+                        </div>
+
+                        <div>
+                            <label for="prioritySelect"
+                                class="text-xs text-slate-500 dark:text-slate-400 mb-1 block">Priority</label>
+                            <select id="prioritySelect" title="Participant priority"
+                                class="focus-ring w-full px-3 py-2 border-2 border-slate-200 dark:border-slate-600 rounded-xl bg-white dark:bg-slate-700">
+                                <option value="required">⭐ Required</option>
+                                <option value="optional">◯ Optional</option>
+                            </select>
                         </div>
 
                         <div class="flex gap-2">
                             <button id="addBtn"
-                                class="flex-1 px-3 py-2 bg-timesync-500 hover:bg-timesync-700 text-white rounded-md">Add</button>
-                            <button id="demoPerson"
-                                class="px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-md">Quick
-                                +</button>
+                                class="flex-1 px-4 py-3 bg-gradient-to-r from-timesync-500 to-timesync-600 hover:from-timesync-600 hover:to-timesync-700 text-white rounded-xl font-medium shadow-lg hover:shadow-xl transition-smooth">
+                                Add Participant
+                            </button>
+                            <button id="quickAddBtn"
+                                class="px-4 py-3 border-2 border-slate-200 dark:border-slate-600 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700 transition-smooth"
+                                title="Quick add random">
+                                ⚡
+                            </button>
                         </div>
-                    </div>
-
-                    <h3 class="mt-6 text-sm font-medium text-slate-600 dark:text-slate-300">Participants</h3>
-                    <div id="participantsContainer" class="mt-3 space-y-3 max-h-64 overflow-auto pr-2">
-                        <!-- Participant cards inserted here -->
-                    </div>
-
-                    <div class="mt-4">
-                        <label class="text-sm text-slate-500 dark:text-slate-300">Max suggestions</label>
-                        <input id="maxSuggestions" type="number" min="1" max="6" value="3"
-                            class="mt-1 w-24 px-2 py-1 border rounded-md bg-white dark:bg-slate-800" />
                     </div>
                 </div>
 
-                <!-- Right: heatmap + suggestions -->
-                <div class="flex-1 p-6">
-                    <div class="flex items-center justify-between">
-                        <h2 class="text-lg font-semibold">Availability Heatmap (UTC)</h2>
-                        <div class="text-sm text-slate-500 dark:text-slate-300">Hover a cell to see who is available
+                <!-- Participants List -->
+                <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-lg p-4 md:p-6 transition-smooth animate-slideIn"
+                    style="animation-delay: 0.1s">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-bold">👥 Participants</h3>
+                        <div class="flex gap-2">
+                            <input type="text" id="participantSearch" placeholder="🔍 Search..."
+                                class="text-xs px-3 py-1 border-2 rounded-lg w-28 md:w-32 focus-ring dark:bg-slate-700 dark:border-slate-600" />
+                            <button id="clearAllBtn"
+                                class="text-xs px-2 py-1 rounded-lg text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-smooth">
+                                ✕ Clear
+                            </button>
                         </div>
                     </div>
-
-                    <div id="heatmapWrap" class="mt-3 overflow-auto">
-                        <div id="heatmap" class="inline-flex gap-1 items-start">
-                            <!-- Heatmap grid will be generated here -->
-                        </div>
+                    <div id="participantsContainer" class="space-y-3 max-h-96 overflow-auto custom-scrollbar pr-2">
+                        <!-- Populated by JS -->
                     </div>
+                </div>
 
-                    <div class="mt-6">
-                        <h3 class="text-md font-semibold">Suggested Meeting Times</h3>
-                        <div id="suggestions" class="mt-3 grid gap-3 grid-cols-1 md:grid-cols-2"></div>
+                <!-- Analytics Card -->
+                <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-lg p-4 md:p-6 transition-smooth animate-slideIn"
+                    style="animation-delay: 0.2s">
+                    <h3 class="text-lg font-bold mb-4">📊 Analytics</h3>
+                    <div id="analyticsContent" class="space-y-4">
+                        <!-- Populated by JS -->
                     </div>
                 </div>
             </div>
 
-            <div
-                class="p-4 text-xs text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-900 border-t border-slate-100 dark:border-slate-700">
-                TimeSync • Client-side only • Ready for GitHub Pages / Vercel deploy
+            <!-- RIGHT CONTENT -->
+            <div class="space-y-4 md:space-y-6 min-w-0">
+
+                <!-- AI Insights -->
+                <!-- <div id="aiInsightsCard"
+                    class="bg-white dark:bg-slate-800 rounded-2xl shadow-lg p-4 md:p-6 transition-smooth animate-fadeIn">
+                    <div class="flex items-start justify-between mb-4">
+                        <div>
+                            <h2 class="text-xl font-bold flex items-center gap-2">
+                                <span>🤖</span>
+                                <span>AI Insights</span>
+                            </h2>
+                            <p id="aiStatusText" class="text-sm text-slate-500 dark:text-slate-300">
+                                Add participants to generate AI insights.
+                            </p>
+                        </div>
+                        <span id="aiStatusSpinner" class="spinner hidden inline-block"
+                            style="width:20px;height:20px;border-width:3px;"></span>
+                    </div>
+
+                    <div class="grid gap-4 md:grid-cols-2">
+                        <section class="space-y-2">
+                            <div class="flex items-center gap-2">
+                                <span class="text-lg">✨</span>
+                                <h3 class="text-lg font-semibold text-slate-800 dark:text-slate-100">Smart Suggestions
+                                </h3>
+                            </div>
+                            <div id="aiSmartContent" class="text-sm text-slate-500 dark:text-slate-300">
+                                Add participants to generate personalized recommendations.
+                            </div>
+                        </section>
+
+                        <section class="space-y-2">
+                            <div class="flex items-center gap-2">
+                                <span class="text-lg">🧭</span>
+                                <h3 class="text-lg font-semibold text-slate-800 dark:text-slate-100">Conflict Resolver
+                                </h3>
+                            </div>
+                            <div id="aiConflictContent" class="text-sm text-slate-500 dark:text-slate-300">
+                                Add at least two participants to evaluate potential conflicts.
+                            </div>
+                        </section>
+                    </div>
+                </div> -->
+
+                <!-- Heatmap -->
+                <div
+                    class="bg-white dark:bg-slate-800 rounded-2xl shadow-lg p-4 md:p-6 transition-smooth animate-fadeIn">
+                    <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
+                        <h2 class="text-xl font-bold">🔥 Availability Heatmap</h2>
+                        <div class="flex items-center gap-2 flex-wrap text-xs md:text-sm">
+                            <label for="viewDaySelect" class="text-slate-500">View:</label>
+                            <select id="viewDaySelect" title="Select day view"
+                                class="px-2 py-1 text-xs border-2 bg-white dark:bg-slate-700 dark:text-white dark:border-slate-600 rounded-lg focus-ring">
+                                <option value="0">Today</option>
+                            </select>
+                            <label for="timeRangeStart" class="text-slate-500 ml-2">Range:</label>
+                            <select id="timeRangeStart"
+                                class="px-2 py-1 text-xs border-2 rounded-lg focus-ring dark:bg-slate-700 dark:border-slate-600">
+                                <option value="0" selected>12am</option>
+                            </select>
+                            <span class="text-xs text-slate-400">to</span>
+                            <select id="timeRangeEnd"
+                                class="px-2 py-1 text-xs border-2 rounded-lg focus-ring dark:bg-slate-700 dark:border-slate-600">
+                                <option value="24" selected>12am</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="mb-4 text-xs md:text-sm text-slate-500 dark:text-slate-400">
+                        💡 <strong>Tip:</strong> Hover cells to see availability. ⚠️ = Inconvenient • ⭐ = Golden hour
+                        (80%+ available)
+                    </div>
+
+                    <div class="flex items-center gap-3 md:gap-4 mb-4 text-xs flex-wrap">
+                        <span class="text-slate-500">Legend:</span>
+                        <div class="flex items-center gap-1">
+                            <div class="w-5 h-5 rounded bg-slate-100 dark:bg-slate-700"></div>
+                            <span>None</span>
+                        </div>
+                        <div class="flex items-center gap-1">
+                            <div class="w-5 h-5 rounded bg-emerald-200"></div>
+                            <span>Low</span>
+                        </div>
+                        <div class="flex items-center gap-1">
+                            <div class="w-5 h-5 rounded bg-emerald-400"></div>
+                            <span>Med</span>
+                        </div>
+                        <div class="flex items-center gap-1">
+                            <div class="w-5 h-5 rounded bg-emerald-600"></div>
+                            <span>High</span>
+                        </div>
+                    </div>
+
+                    <div id="heatmapWrap" class="overflow-x-auto custom-scrollbar pb-4">
+                        <div id="heatmap" class="inline-flex flex-col gap-2 min-w-max">
+                            <!-- Populated by JS -->
+                        </div>
+                    </div>
+
+                    <div id="goldenHoursInfo" class="mt-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg hidden">
+                        <div class="text-sm font-semibold text-yellow-800 dark:text-yellow-200 mb-1">⭐ Golden Hours
+                            Detected</div>
+                        <div id="goldenHoursList" class="text-xs text-yellow-700 dark:text-yellow-300"></div>
+                    </div>
+                </div>
+
+                <!-- Suggestions -->
+                <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-lg p-4 md:p-6 transition-smooth animate-fadeIn"
+                    style="animation-delay: 0.1s">
+                    <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
+                        <h2 class="text-xl font-bold">✨ Suggested Times</h2>
+                        <div class="flex gap-2">
+                            <button id="aiSuggestBtn"
+                                class="px-3 py-2 text-sm bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 text-white rounded-lg transition-smooth shadow-lg hover:shadow-xl font-medium">
+                                🤖 AI Suggest
+                            </button>
+                            <button id="refreshSuggestionsBtn"
+                                class="px-3 py-2 text-sm bg-timesync-100 dark:bg-timesync-900 text-timesync-700 dark:text-timesync-300 rounded-lg hover:bg-timesync-200 transition-smooth">
+                                🔄 Refresh
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="suggestions" class="space-y-4">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- Floating Settings Panel -->
+        <button id="settingsToggleFloating" aria-controls="settingsPanel" aria-expanded="false"
+            class="fixed z-40 top-6 right-4 md:right-8 bg-gradient-to-r from-timesync-500 to-timesync-600 hover:from-timesync-600 hover:to-timesync-700 text-white rounded-full w-12 h-12 shadow-lg flex items-center justify-center text-2xl focus-ring transition-smooth">
+            ⚙️
+        </button>
+
+        <div id="settingsPanel" class="hidden fixed z-40 top-6 right-4 md:right-8 w-[340px] max-h-[86vh] overflow-y-auto custom-scrollbar
+            bg-white/90 dark:bg-slate-800/90 backdrop-blur-xl border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl p-6
+            transition-smooth origin-top-right scale-95 opacity-0" role="dialog" aria-modal="true"
+            aria-labelledby="settingsPanelTitle">
+            <div class="flex items-start justify-between mb-4">
+                <h2 id="settingsPanelTitle" class="text-lg font-bold flex items-center gap-2">⚙️ Settings
+                </h2>
+                <button id="closeSettingsPanel"
+                    class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 text-xl leading-none">&times;</button>
+            </div>
+
+            <div class="space-y-6">
+                <!-- Display Section -->
+                <section>
+                    <h3 class="text-sm font-semibold mb-3 text-slate-500 dark:text-slate-300 uppercase tracking-wide">
+                        Display</h3>
+                    <div class="space-y-3">
+                        <div>
+                            <label class="text-xs font-medium mb-1 block text-slate-600 dark:text-slate-300">Date
+                                Format</label>
+                            <select id="dateFormatSelect"
+                                class="w-full px-3 py-2 border-2 rounded-lg bg-white dark:bg-slate-700 text-sm focus-ring">
+                                <option value="MM/DD/YYYY">MM/DD/YYYY (US)</option>
+                                <option value="DD/MM/YYYY">DD/MM/YYYY (EU)</option>
+                                <option value="YYYY-MM-DD">YYYY-MM-DD (ISO)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="text-xs font-medium mb-1 block text-slate-600 dark:text-slate-300">Time
+                                Format</label>
+                            <select id="timeFormatSelect"
+                                class="w-full px-3 py-2 border-2 rounded-lg bg-white dark:bg-slate-700 text-sm focus-ring">
+                                <option value="12h">12-hour (AM/PM)</option>
+                                <option value="24h">24-hour</option>
+                            </select>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Scheduling Section -->
+                <section>
+                    <h3 class="text-sm font-semibold mb-3 text-slate-500 dark:text-slate-300 uppercase tracking-wide">
+                        Scheduling</h3>
+                    <div class="space-y-3">
+                        <div>
+                            <label class="text-sm font-medium mb-2 block">Meeting Duration</label>
+                            <select id="durationSelect"
+                                class="w-full px-3 py-2 border-2 rounded-lg bg-white dark:bg-slate-700 focus-ring">
+                                <option value="30">30 minutes</option>
+                                <option value="45">45 minutes</option>
+                                <option value="60" selected>60 minutes</option>
+                                <option value="90">90 minutes</option>
+                                <option value="120">2 hours</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="text-sm font-medium mb-2 block">Days to Check</label>
+                            <select id="daysSelect"
+                                class="w-full px-3 py-2 border-2 rounded-lg bg-white dark:bg-slate-700 focus-ring">
+                                <option value="1" selected>Today only</option>
+                                <option value="3">Next 3 days</option>
+                                <option value="7">Next 7 days</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="text-sm font-medium mb-2 block">Max Suggestions</label>
+                            <input id="maxSuggestions" type="number" min="1" max="10" value="5"
+                                class="w-full px-3 py-2 border-2 rounded-lg bg-white dark:bg-slate-700 focus-ring" />
+                        </div>
+                        <label class="flex items-center gap-3 cursor-pointer pt-1">
+                            <input type="checkbox" id="excludeLunch" class="w-5 h-5 rounded border-2">
+                            <span class="text-sm">Exclude lunch (12-1pm local)</span>
+                        </label>
+                    </div>
+                </section>
+
+                <!-- Actions Section -->
+                <section>
+                    <h3 class="text-sm font-semibold mb-3 text-slate-500 dark:text-slate-300 uppercase tracking-wide">
+                        Actions</h3>
+                    <div class="space-y-2">
+                        <button id="shareBtn"
+                            class="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-smooth">🔗
+                            Copy Share Link</button>
+                    </div>
+                </section>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div
+            class="w-full max-w-full mt-8 text-center text-sm text-slate-500 dark:text-slate-400 border-t border-slate-200 dark:border-slate-700 pt-4">
+            <p>TimeSync v2.1 • 100% Client-Side • No Data Collected • Developed by <a class="text-purple-500 hover:underline" href="https://nate.et">Nate.et</a></p>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div id="toastRoot" class="fixed bottom-6 right-6 flex flex-col gap-2 z-50"></div>
+
+    <!-- Bulk Import Modal -->
+    <div id="bulkModal"
+        class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl max-w-2xl w-full p-6 animate-fadeIn">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-xl font-bold">📋 Bulk Import Participants</h3>
+                <button id="closeBulkModal" class="text-slate-400 hover:text-slate-600 text-2xl">&times;</button>
+            </div>
+            <p class="text-sm text-slate-500 mb-4">Paste CSV data (Name, Timezone, Start, End, Priority):
+                <br>
+                <code
+                    class="bg-slate-100 dark:bg-slate-700 px-2 py-1 mt-2 block text-xs rounded">Alice,America/New_York,09:00,17:00,required</code>
+            </p>
+            <textarea id="bulkTextarea"
+                class="w-full h-48 px-4 py-3 border-2 rounded-xl font-mono text-sm focus-ring dark:bg-slate-700 dark:border-slate-600"
+                placeholder="Alice,America/New_York,09:00,17:00,required&#10;Bob,Europe/London,08:30,16:30,optional"></textarea>
+            <div class="flex gap-3 mt-4">
+                <button id="bulkImportConfirm"
+                    class="flex-1 px-4 py-3 bg-timesync-600 hover:bg-timesync-700 text-white rounded-xl font-medium transition-smooth">
+                    Import
+                </button>
+                <button id="bulkImportCancel"
+                    class="px-4 py-3 border-2 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700 transition-smooth">
+                    Cancel
+                </button>
             </div>
         </div>
     </div>
 
-    <!-- Toast container -->
-    <div id="toastRoot" class="fixed bottom-6 right-6 flex flex-col gap-2 z-50"></div>
+    <!-- Edit Modal -->
+    <div id="editModal"
+        class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl max-w-md w-full p-6 animate-fadeIn">
+            <h3 class="text-xl font-bold mb-4">✏️ Edit Participant</h3>
+            <div class="space-y-3">
+                <input id="editName"
+                    class="w-full px-4 py-3 border-2 rounded-xl focus-ring dark:bg-slate-700 dark:border-slate-600"
+                    placeholder="Name" maxlength="50" />
+                <select id="editTz"
+                    class="w-full px-4 py-3 border-2 rounded-xl focus-ring dark:bg-slate-700 dark:border-slate-600">
+                    <option value="">Select timezone</option>
+                </select>
+                <div class="grid grid-cols-2 gap-3">
+                    <input id="editStart" type="time"
+                        class="w-full px-3 py-2 border-2 rounded-xl focus-ring dark:bg-slate-700 dark:border-slate-600" />
+                    <input id="editEnd" type="time"
+                        class="w-full px-3 py-2 border-2 rounded-xl focus-ring dark:bg-slate-700 dark:border-slate-600" />
+                </div>
+                <select id="editPriority"
+                    class="w-full px-3 py-2 border-2 rounded-xl focus-ring dark:bg-slate-700 dark:border-slate-600">
+                    <option value="required">⭐ Required</option>
+                    <option value="optional">◯ Optional</option>
+                </select>
+            </div>
+            <div class="flex gap-3 mt-4">
+                <button id="editConfirm"
+                    class="flex-1 px-4 py-3 bg-timesync-600 hover:bg-timesync-700 text-white rounded-xl font-medium transition-smooth">
+                    Save Changes
+                </button>
+                <button id="editCancel"
+                    class="px-4 py-3 border-2 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700 transition-smooth">
+                    Cancel
+                </button>
+            </div>
+        </div>
+    </div>
 
-    <script>
-    </Script>
+    <!-- Clear All Modal -->
+    <div id="clearAllModal" role="dialog" aria-modal="true" aria-labelledby="clearAllTitle"
+        class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl max-w-sm w-full p-6 animate-fadeIn">
+            <h2 id="clearAllTitle" class="text-lg font-semibold mb-2 text-slate-800 dark:text-slate-100">Clear all
+                participants?</h2>
+            <p class="text-sm text-slate-600 dark:text-slate-300 mb-6">This will remove all participants and their
+                availability data. This cannot be undone.</p>
+            <div class="flex justify-end gap-3">
+                <button id="clearAllCancel"
+                    class="px-4 py-2 rounded-lg border-2 text-sm font-medium transition-smooth hover:bg-slate-50 dark:hover:bg-slate-700">Cancel</button>
+                <button id="clearAllConfirm"
+                    class="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white text-sm font-medium transition-smooth">Clear
+                    All</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Remove Participant Modal -->
+    <div id="removeParticipantModal" role="dialog" aria-modal="true" aria-labelledby="removeParticipantTitle"
+        class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl max-w-sm w-full p-6 animate-fadeIn">
+            <h2 id="removeParticipantTitle" class="text-lg font-semibold mb-2 text-slate-800 dark:text-slate-100">Remove
+                participant?</h2>
+            <p class="text-sm text-slate-600 dark:text-slate-300 mb-4">This will remove <span class="font-semibold"
+                    id="removeParticipantName"></span> from the list. This cannot be undone.</p>
+            <div class="flex justify-end gap-3">
+                <button id="removeParticipantCancel"
+                    class="px-4 py-2 rounded-lg border-2 text-sm font-medium transition-smooth hover:bg-slate-50 dark:hover:bg-slate-700">Cancel</button>
+                <button id="removeParticipantConfirm"
+                    class="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white text-sm font-medium transition-smooth">Remove</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay"
+        class="hidden fixed inset-0 bg-black/30 backdrop-blur-sm z-50 flex items-center justify-center">
+        <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl p-6 flex flex-col items-center gap-4">
+            <div class="spinner"></div>
+            <div class="text-sm font-medium" id="loadingText">Processing...</div>
+        </div>
+    </div>
+    <script src="app.js"></script>
 </body>
 
 </html>
